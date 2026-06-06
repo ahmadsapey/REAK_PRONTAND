@@ -3,6 +3,30 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
+const API_ORIGIN = (() => {
+  try {
+    return new URL(api.defaults.baseURL).origin;
+  } catch {
+    return '';  
+  }
+})();
+
+const normalizeFotoUrl = (url) => {
+  if (!url || !API_ORIGIN) return url;
+  try {
+    const parsed = new URL(url);
+    const correct = new URL(API_ORIGIN);
+    if (parsed.hostname !== correct.hostname ) {
+      parsed.hostname = correct.hostname;
+      parsed.port = correct.port;
+      parsed.protocol = correct.protocol;
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+};
+
 // Komponen Kamera dengan Frame Wajah
 function KameraModal({ onCapture, onClose }) {
   const videoRef = useRef(null);
@@ -293,7 +317,7 @@ function Profil() {
         const data = res.data;
         setUser(data);
         setFormProfil({ name: data.name || '', email: data.email || '', no_hp: data.no_hp || '' });
-        setPreviewFoto(data.foto || null);
+        setPreviewFoto(normalizeFotoUrl(data.foto) || null);
       } catch {
         toast.error('Sesi habis, silakan login lagi');
         localStorage.removeItem('token');
@@ -370,12 +394,12 @@ function Profil() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      setPreviewFoto(res.data.data.foto);
-      setUser((prev) => ({ ...prev, foto: res.data.data.foto }));
+      setPreviewFoto(normalizeFotoUrl(res.data.data.foto));
+      setUser((prev) => ({ ...prev, foto: normalizeFotoUrl(res.data.data.foto) }));
       toast.success('Foto profil berhasil diperbarui!');
     } catch {
       toast.error('Gagal mengupload foto');
-      setPreviewFoto(user?.foto || null);
+      setPreviewFoto(normalizeFotoUrl(user?.foto) || null);
     } finally {
       setUploadingFoto(false);
     }
